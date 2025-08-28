@@ -1,109 +1,93 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-  <meta charset="UTF-8">
-  <title>โปรแกรมรายรับ-รายจ่าย + ภาษี</title>
-  <style>
-    body { font-family: Arial, sans-serif; background: white; text-align: center; }
-    table { margin: 20px auto; border-collapse: collapse; }
-    th, td { border: 1px solid gray; padding: 5px 10px; text-align: center; }
-    th { background: lightgray; }
-    input { width: 100px; text-align: center; }
-    button { margin: 5px; padding: 8px 12px; border-radius: 6px; border: 1px solid gray; cursor: pointer; }
-    #balance { color: blue; font-weight: bold; }
-    #tax { color: red; font-weight: bold; }
-  </style>
+<meta charset="UTF-8">
+<title>BeeSchedule</title>
+<style>
+  body { background: orange; font-family: Arial, sans-serif; color: white; text-align: center; }
+  input { padding: 5px; margin: 3px; }
+  button { padding: 5px 10px; margin: 5px; cursor: pointer; border-radius: 5px; border: none; background: brown; color: white; }
+  ul { list-style: none; padding: 0; max-width: 400px; margin: 10px auto; text-align: left; }
+  li { background: white; color: brown; padding: 5px; margin: 3px 0; border-radius: 4px; display: flex; justify-content: space-between; }
+  li span { flex: 1; }
+</style>
 </head>
 <body>
 
-  <h2>โปรแกรมรายรับ-รายจ่าย + ภาษี</h2>
+<h1>Welcome to BeeSchedule!</h1>
+<p>Let's Get Start!</p>
+<button onclick="showMainPage()">Start</button>
 
-  <table id="expenseTable">
-    <tr>
-      <th>วันที่</th>
-      <th>รายการ</th>
-      <th>รายรับ</th>
-      <th>รายจ่าย</th>
-    </tr>
-  </table>
+<div id="mainPage" style="display:none;">
+  <h2>- BeeSchedule -</h2>
+  <input type="text" id="subject" placeholder="Subject Name">
+  <input type="text" id="details" placeholder="Details">
+  <input type="date" id="dueDate">
+  <br>
+  <button onclick="addHomework()">Add Homework</button>
+  <button onclick="deleteHomework()">Delete Selected</button>
+  <ul id="homeworkList"></ul>
+</div>
 
-  <div>
-    <button onclick="addRow()">+ ตาราง</button>
-    <button onclick="deleteRow()">- ตาราง</button>
-  </div>
+<script>
+let selectedIndex = null;
 
-  <div>
-    <button onclick="calculateBalance()">คำนวณยอดคงเหลือ</button>
-    <span id="balance"></span>
-  </div>
+// โหลดการบ้านจาก localStorage
+let homeworkData = JSON.parse(localStorage.getItem('homeworkData') || '[]');
 
-  <div style="margin-top:20px;">
-    <label>เงินเดือน: <input type="number" id="salary"></label>
-    <button onclick="calculateTax()">คำนวณภาษี (ก้าวหน้า)</button>
-    <span id="tax"></span>
-  </div>
+function showMainPage() {
+  document.querySelector("button").style.display = "none";
+  document.querySelector("p").style.display = "none";
+  document.getElementById("mainPage").style.display = "block";
+  updateList();
+}
 
-  <script>
-    const table = document.getElementById("expenseTable");
-
-    function addRow() {
-      const row = table.insertRow();
-      for (let i = 0; i < 4; i++) {
-        const cell = row.insertCell(i);
-        cell.innerHTML = `<input type="text">`;
-      }
+function updateList() {
+  const list = document.getElementById('homeworkList');
+  list.innerHTML = '';
+  homeworkData.sort((a,b) => a.dueDate.localeCompare(b.dueDate));
+  homeworkData.forEach((hw, index) => {
+    const li = document.createElement('li');
+    li.innerHTML = `<span>${hw.subject} - ${hw.details} - Due: ${hw.dueDate}</span>`;
+    li.onclick = () => {
+      Array.from(list.children).forEach(item => item.style.background='white');
+      li.style.background = '#ffd700';
+      selectedIndex = index;
     }
+    list.appendChild(li);
+  });
+}
 
-    function deleteRow() {
-      if (table.rows.length > 1) {
-        table.deleteRow(table.rows.length - 1);
-      }
-    }
+function addHomework() {
+  const subject = document.getElementById('subject').value.trim();
+  const details = document.getElementById('details').value.trim();
+  const dueDate = document.getElementById('dueDate').value;
 
-    function calculateBalance() {
-      let balance = 0;
-      for (let r = 1; r < table.rows.length; r++) {
-        const income = parseFloat(table.rows[r].cells[2].children[0].value) || 0;
-        const expense = parseFloat(table.rows[r].cells[3].children[0].value) || 0;
-        balance += income - expense;
-      }
-      document.getElementById("balance").innerText = balance.toLocaleString();
-    }
+  if(!subject || !dueDate){
+    alert("กรุณากรอกชื่อวิชาและวันที่ส่ง");
+    return;
+  }
 
-    function calculateTax() {
-      const salary = parseFloat(document.getElementById("salary").value);
-      if (isNaN(salary)) {
-        alert("กรุณาใส่เงินเดือนเป็นตัวเลข");
-        return;
-      }
+  homeworkData.push({subject, details, dueDate});
+  localStorage.setItem('homeworkData', JSON.stringify(homeworkData));
 
-      const annual_income = salary * 12;
-      const brackets = [
-        [150000, 0.00],
-        [300000, 0.05],
-        [500000, 0.10],
-        [750000, 0.15],
-        [1000000, 0.20],
-        [2000000, 0.25],
-        [5000000, 0.30],
-        [Infinity, 0.35]
-      ];
+  document.getElementById('subject').value = '';
+  document.getElementById('details').value = '';
+  document.getElementById('dueDate').value = '';
+  updateList();
+}
 
-      let tax = 0;
-      let prev_limit = 0;
-      for (let [limit, rate] of brackets) {
-        if (annual_income > limit) {
-          tax += (limit - prev_limit) * rate;
-          prev_limit = limit;
-        } else {
-          tax += (annual_income - prev_limit) * rate;
-          break;
-        }
-      }
-
-      document.getElementById("tax").innerText = tax.toLocaleString() + " บาท/ปี";
-    }
-  </script>
+function deleteHomework() {
+  if(selectedIndex === null){
+    alert("กรุณาเลือกการบ้านที่จะลบ");
+    return;
+  }
+  homeworkData.splice(selectedIndex, 1);
+  localStorage.setItem('homeworkData', JSON.stringify(homeworkData));
+  selectedIndex = null;
+  updateList();
+}
+</script>
 
 </body>
 </html>
