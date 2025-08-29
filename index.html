@@ -1,93 +1,109 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-<meta charset="UTF-8">
-<title>BeeSchedule</title>
-<style>
-  body { background: orange; font-family: Arial, sans-serif; color: white; text-align: center; }
-  input { padding: 5px; margin: 3px; }
-  button { padding: 5px 10px; margin: 5px; cursor: pointer; border-radius: 5px; border: none; background: brown; color: white; }
-  ul { list-style: none; padding: 0; max-width: 400px; margin: 10px auto; text-align: left; }
-  li { background: white; color: brown; padding: 5px; margin: 3px 0; border-radius: 4px; display: flex; justify-content: space-between; }
-  li span { flex: 1; }
-</style>
+  <meta charset="UTF-8">
+  <title>BeeSchedule (PyScript)</title>
+  <link rel="stylesheet" href="https://pyscript.net/latest/pyscript.css" />
+  <script defer src="https://pyscript.net/latest/pyscript.js"></script>
+  <style>
+    body { background: orange; font-family: Arial, sans-serif; color: white; text-align: center; }
+    input { padding: 5px; margin: 3px; }
+    button { padding: 5px 10px; margin: 5px; cursor: pointer; border-radius: 5px; border: none; background: brown; color: white; }
+    ul { list-style: none; padding: 0; max-width: 400px; margin: 10px auto; text-align: left; }
+    li { background: white; color: brown; padding: 5px; margin: 3px 0; border-radius: 4px; display: flex; justify-content: space-between; cursor: pointer; }
+    li.selected { background: #ffd700; }
+  </style>
 </head>
 <body>
 
-<h1>Welcome to BeeSchedule!</h1>
-<p>Let's Get Start!</p>
-<button onclick="showMainPage()">Start</button>
+  <h1>Welcome to BeeSchedule!</h1>
+  <p>Let's Get Start!</p>
+  <button id="startBtn">Start</button>
 
-<div id="mainPage" style="display:none;">
-  <h2>- BeeSchedule -</h2>
-  <input type="text" id="subject" placeholder="Subject Name">
-  <input type="text" id="details" placeholder="Details">
-  <input type="date" id="dueDate">
-  <br>
-  <button onclick="addHomework()">Add Homework</button>
-  <button onclick="deleteHomework()">Delete Selected</button>
-  <ul id="homeworkList"></ul>
-</div>
+  <div id="mainPage" style="display:none;">
+    <h2>- BeeSchedule -</h2>
+    <input type="text" id="subject" placeholder="Subject Name">
+    <input type="text" id="details" placeholder="Details">
+    <input type="date" id="dueDate">
+    <br>
+    <button id="addBtn">Add Homework</button>
+    <button id="deleteBtn">Delete Selected</button>
+    <ul id="homeworkList"></ul>
+  </div>
 
-<script>
-let selectedIndex = null;
+  <py-script>
+from js import document, localStorage
 
-// โหลดการบ้านจาก localStorage
-let homeworkData = JSON.parse(localStorage.getItem('homeworkData') || '[]');
+homework_data = []
 
-function showMainPage() {
-  document.querySelector("button").style.display = "none";
-  document.querySelector("p").style.display = "none";
-  document.getElementById("mainPage").style.display = "block";
-  updateList();
-}
+def load_data():
+    global homework_data
+    data = localStorage.getItem("homeworkData")
+    if data:
+        import json
+        homework_data = json.loads(data)
+    else:
+        homework_data = []
 
-function updateList() {
-  const list = document.getElementById('homeworkList');
-  list.innerHTML = '';
-  homeworkData.sort((a,b) => a.dueDate.localeCompare(b.dueDate));
-  homeworkData.forEach((hw, index) => {
-    const li = document.createElement('li');
-    li.innerHTML = `<span>${hw.subject} - ${hw.details} - Due: ${hw.dueDate}</span>`;
-    li.onclick = () => {
-      Array.from(list.children).forEach(item => item.style.background='white');
-      li.style.background = '#ffd700';
-      selectedIndex = index;
-    }
-    list.appendChild(li);
-  });
-}
+def save_data():
+    import json
+    localStorage.setItem("homeworkData", json.dumps(homework_data))
 
-function addHomework() {
-  const subject = document.getElementById('subject').value.trim();
-  const details = document.getElementById('details').value.trim();
-  const dueDate = document.getElementById('dueDate').value;
+def update_list():
+    ul = document.getElementById("homeworkList")
+    ul.innerHTML = ""
+    homework_data.sort(key=lambda x: x["due_date"])
+    for idx, hw in enumerate(homework_data):
+        li = document.createElement("li")
+        li.innerText = f"{hw['subject']} - {hw['details']} - Due: {hw['due_date']}"
+        def on_click(event, i=idx):
+            for el in ul.children:
+                el.classList.remove("selected")
+            li.classList.add("selected")
+            ul.setAttribute("data-selected", str(i))
+        li.addEventListener("click", on_click)
+        ul.appendChild(li)
 
-  if(!subject || !dueDate){
-    alert("กรุณากรอกชื่อวิชาและวันที่ส่ง");
-    return;
-  }
+def add_homework(event=None):
+    subject = document.getElementById("subject").value.strip()
+    details = document.getElementById("details").value.strip()
+    due_date = document.getElementById("dueDate").value
+    if not subject or not due_date:
+        from js import alert
+        alert("กรุณากรอกชื่อวิชาและวันที่ส่ง")
+        return
+    homework_data.append({"subject": subject, "details": details, "due_date": due_date})
+    save_data()
+    document.getElementById("subject").value = ""
+    document.getElementById("details").value = ""
+    document.getElementById("dueDate").value = ""
+    update_list()
 
-  homeworkData.push({subject, details, dueDate});
-  localStorage.setItem('homeworkData', JSON.stringify(homeworkData));
+def delete_homework(event=None):
+    ul = document.getElementById("homeworkList")
+    sel = ul.getAttribute("data-selected")
+    if sel is None:
+        from js import alert
+        alert("กรุณาเลือกการบ้านที่จะลบ")
+        return
+    i = int(sel)
+    homework_data.pop(i)
+    save_data()
+    ul.removeAttribute("data-selected")
+    update_list()
 
-  document.getElementById('subject').value = '';
-  document.getElementById('details').value = '';
-  document.getElementById('dueDate').value = '';
-  updateList();
-}
+def show_main(event=None):
+    document.getElementById("startBtn").style.display = "none"
+    document.querySelector("p").style.display = "none"
+    document.getElementById("mainPage").style.display = "block"
+    load_data()
+    update_list()
 
-function deleteHomework() {
-  if(selectedIndex === null){
-    alert("กรุณาเลือกการบ้านที่จะลบ");
-    return;
-  }
-  homeworkData.splice(selectedIndex, 1);
-  localStorage.setItem('homeworkData', JSON.stringify(homeworkData));
-  selectedIndex = null;
-  updateList();
-}
-</script>
+# ผูกปุ่ม
+document.getElementById("startBtn").addEventListener("click", show_main)
+document.getElementById("addBtn").addEventListener("click", add_homework)
+document.getElementById("deleteBtn").addEventListener("click", delete_homework)
+  </py-script>
 
 </body>
 </html>
