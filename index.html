@@ -1,38 +1,48 @@
 <!DOCTYPE html>
-<html lang="th">
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>BeeSchedule (PyScript)</title>
-  <link rel="stylesheet" href="https://pyscript.net/latest/pyscript.css" />
-  <script defer src="https://pyscript.net/latest/pyscript.js"></script>
-  <style>
-    body { background: orange; font-family: Arial, sans-serif; color: white; text-align: center; }
-    input { padding: 5px; margin: 3px; }
-    button { padding: 5px 10px; margin: 5px; cursor: pointer; border-radius: 5px; border: none; background: brown; color: white; }
-    ul { list-style: none; padding: 0; max-width: 400px; margin: 10px auto; text-align: left; }
-    li { background: white; color: brown; padding: 5px; margin: 3px 0; border-radius: 4px; display: flex; justify-content: space-between; cursor: pointer; }
-    li.selected { background: #ffd700; }
-  </style>
+    <meta charset="UTF-8">
+    <title>BeeSchedule</title>
+    <link rel="stylesheet" href="https://pyscript.net/latest/pyscript.css" />
+    <script defer src="https://pyscript.net/latest/pyscript.js"></script>
+    <style>
+        body {
+            background-color: orange;
+            font-family: Arial, sans-serif;
+            text-align: center;
+            color: white;
+        }
+        #mainPage {
+            display: none;
+        }
+        button {
+            margin: 5px;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+        }
+        .btn-start { background: #b31237; color: white; }
+    </style>
 </head>
 <body>
+    <h1>Welcome to BeeSchedule!</h1>
+    <p>Let's Get Start!</p>
+    <button id="startBtn" class="btn-start">Start</button>
 
-  <h1>Welcome to BeeSchedule!</h1>
-  <p>Let's Get Start!</p>
-  <button id="startBtn">Start</button>
+    <div id="mainPage">
+        <input id="subject" placeholder="วิชา">
+        <input id="details" placeholder="รายละเอียด">
+        <input id="dueDate" type="date">
+        <button id="addBtn">เพิ่มการบ้าน</button>
+        <button id="deleteBtn">ลบที่เลือก</button>
+        <ul id="homeworkList"></ul>
+    </div>
 
-  <div id="mainPage" style="display:none;">
-    <h2>- BeeSchedule -</h2>
-    <input type="text" id="subject" placeholder="Subject Name">
-    <input type="text" id="details" placeholder="Details">
-    <input type="date" id="dueDate">
-    <br>
-    <button id="addBtn">Add Homework</button>
-    <button id="deleteBtn">Delete Selected</button>
-    <ul id="homeworkList"></ul>
-  </div>
-
-  <py-script>
+    <!-- ✅ โค้ด Python ต้องอยู่ใน py-script -->
+    <py-script>
 from js import document, localStorage
+import json
 
 homework_data = []
 
@@ -40,13 +50,11 @@ def load_data():
     global homework_data
     data = localStorage.getItem("homeworkData")
     if data:
-        import json
         homework_data = json.loads(data)
     else:
         homework_data = []
 
 def save_data():
-    import json
     localStorage.setItem("homeworkData", json.dumps(homework_data))
 
 def update_list():
@@ -56,12 +64,8 @@ def update_list():
     for idx, hw in enumerate(homework_data):
         li = document.createElement("li")
         li.innerText = f"{hw['subject']} - {hw['details']} - Due: {hw['due_date']}"
-        def on_click(event, i=idx):
-            for el in ul.children:
-                el.classList.remove("selected")
-            li.classList.add("selected")
-            ul.setAttribute("data-selected", str(i))
-        li.addEventListener("click", on_click)
+        li.setAttribute("data-selected", str(idx))
+        li.onclick = lambda event, i=idx: select_item(i)
         ul.appendChild(li)
 
 def add_homework(event=None):
@@ -74,23 +78,27 @@ def add_homework(event=None):
         return
     homework_data.append({"subject": subject, "details": details, "due_date": due_date})
     save_data()
+    update_list()
     document.getElementById("subject").value = ""
     document.getElementById("details").value = ""
     document.getElementById("dueDate").value = ""
-    update_list()
 
 def delete_homework(event=None):
-    ul = document.getElementById("homeworkList")
-    sel = ul.getAttribute("data-selected")
+    sel = document.querySelector("li.selected")
     if sel is None:
         from js import alert
         alert("กรุณาเลือกการบ้านที่จะลบ")
         return
-    i = int(sel)
-    homework_data.pop(i)
+    idx = int(sel.getAttribute("data-selected"))
+    homework_data.pop(idx)
     save_data()
-    ul.removeAttribute("data-selected")
     update_list()
+
+def select_item(idx):
+    ul = document.getElementById("homeworkList")
+    for el in ul.children:
+        el.classList.remove("selected")
+    ul.children[idx].classList.add("selected")
 
 def show_main(event=None):
     document.getElementById("startBtn").style.display = "none"
@@ -103,7 +111,6 @@ def show_main(event=None):
 document.getElementById("startBtn").addEventListener("click", show_main)
 document.getElementById("addBtn").addEventListener("click", add_homework)
 document.getElementById("deleteBtn").addEventListener("click", delete_homework)
-  </py-script>
-
+    </py-script>
 </body>
 </html>
