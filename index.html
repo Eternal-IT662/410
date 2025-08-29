@@ -1,116 +1,93 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="th">
 <head>
-    <meta charset="UTF-8">
-    <title>BeeSchedule</title>
-    <link rel="stylesheet" href="https://pyscript.net/latest/pyscript.css" />
-    <script defer src="https://pyscript.net/latest/pyscript.js"></script>
-    <style>
-        body {
-            background-color: orange;
-            font-family: Arial, sans-serif;
-            text-align: center;
-            color: white;
-        }
-        #mainPage {
-            display: none;
-        }
-        button {
-            margin: 5px;
-            padding: 10px 20px;
-            border: none;
-            border-radius: 12px;
-            cursor: pointer;
-        }
-        .btn-start { background: #b31237; color: white; }
-    </style>
+<meta charset="UTF-8">
+<title>BeeSchedule</title>
+<style>
+  body { background: orange; font-family: Arial, sans-serif; color: white; text-align: center; }
+  input { padding: 5px; margin: 3px; }
+  button { padding: 5px 10px; margin: 5px; cursor: pointer; border-radius: 5px; border: none; background: brown; color: white; }
+  ul { list-style: none; padding: 0; max-width: 400px; margin: 10px auto; text-align: left; }
+  li { background: white; color: brown; padding: 5px; margin: 3px 0; border-radius: 4px; display: flex; justify-content: space-between; }
+  li span { flex: 1; }
+</style>
 </head>
 <body>
-    <h1>Welcome to BeeSchedule!</h1>
-    <p>Let's Get Start!</p>
-    <button id="startBtn" class="btn-start">Start</button>
 
-    <div id="mainPage">
-        <input id="subject" placeholder="วิชา">
-        <input id="details" placeholder="รายละเอียด">
-        <input id="dueDate" type="date">
-        <button id="addBtn">เพิ่มการบ้าน</button>
-        <button id="deleteBtn">ลบที่เลือก</button>
-        <ul id="homeworkList"></ul>
-    </div>
+<h1>Welcome to BeeSchedule!</h1>
+<p>Let's Get Start!</p>
+<button onclick="showMainPage()">Start</button>
 
-    <!-- ✅ โค้ด Python ต้องอยู่ใน py-script -->
-    <py-script>
-from js import document, localStorage
-import json
+<div id="mainPage" style="display:none;">
+  <h2>- BeeSchedule -</h2>
+  <input type="text" id="subject" placeholder="Subject Name">
+  <input type="text" id="details" placeholder="Details">
+  <input type="date" id="dueDate">
+  <br>
+  <button onclick="addHomework()">Add Homework</button>
+  <button onclick="deleteHomework()">Delete Selected</button>
+  <ul id="homeworkList"></ul>
+</div>
 
-homework_data = []
+<script>
+let selectedIndex = null;
 
-def load_data():
-    global homework_data
-    data = localStorage.getItem("homeworkData")
-    if data:
-        homework_data = json.loads(data)
-    else:
-        homework_data = []
+// โหลดการบ้านจาก localStorage
+let homeworkData = JSON.parse(localStorage.getItem('homeworkData') || '[]');
 
-def save_data():
-    localStorage.setItem("homeworkData", json.dumps(homework_data))
+function showMainPage() {
+  document.querySelector("button").style.display = "none";
+  document.querySelector("p").style.display = "none";
+  document.getElementById("mainPage").style.display = "block";
+  updateList();
+}
 
-def update_list():
-    ul = document.getElementById("homeworkList")
-    ul.innerHTML = ""
-    homework_data.sort(key=lambda x: x["due_date"])
-    for idx, hw in enumerate(homework_data):
-        li = document.createElement("li")
-        li.innerText = f"{hw['subject']} - {hw['details']} - Due: {hw['due_date']}"
-        li.setAttribute("data-selected", str(idx))
-        li.onclick = lambda event, i=idx: select_item(i)
-        ul.appendChild(li)
+function updateList() {
+  const list = document.getElementById('homeworkList');
+  list.innerHTML = '';
+  homeworkData.sort((a,b) => a.dueDate.localeCompare(b.dueDate));
+  homeworkData.forEach((hw, index) => {
+    const li = document.createElement('li');
+    li.innerHTML = `<span>${hw.subject} - ${hw.details} - Due: ${hw.dueDate}</span>`;
+    li.onclick = () => {
+      Array.from(list.children).forEach(item => item.style.background='white');
+      li.style.background = '#ffd700';
+      selectedIndex = index;
+    }
+    list.appendChild(li);
+  });
+}
 
-def add_homework(event=None):
-    subject = document.getElementById("subject").value.strip()
-    details = document.getElementById("details").value.strip()
-    due_date = document.getElementById("dueDate").value
-    if not subject or not due_date:
-        from js import alert
-        alert("กรุณากรอกชื่อวิชาและวันที่ส่ง")
-        return
-    homework_data.append({"subject": subject, "details": details, "due_date": due_date})
-    save_data()
-    update_list()
-    document.getElementById("subject").value = ""
-    document.getElementById("details").value = ""
-    document.getElementById("dueDate").value = ""
+function addHomework() {
+  const subject = document.getElementById('subject').value.trim();
+  const details = document.getElementById('details').value.trim();
+  const dueDate = document.getElementById('dueDate').value;
 
-def delete_homework(event=None):
-    sel = document.querySelector("li.selected")
-    if sel is None:
-        from js import alert
-        alert("กรุณาเลือกการบ้านที่จะลบ")
-        return
-    idx = int(sel.getAttribute("data-selected"))
-    homework_data.pop(idx)
-    save_data()
-    update_list()
+  if(!subject || !dueDate){
+    alert("กรุณากรอกชื่อวิชาและวันที่ส่ง");
+    return;
+  }
 
-def select_item(idx):
-    ul = document.getElementById("homeworkList")
-    for el in ul.children:
-        el.classList.remove("selected")
-    ul.children[idx].classList.add("selected")
+  homeworkData.push({subject, details, dueDate});
+  localStorage.setItem('homeworkData', JSON.stringify(homeworkData));
 
-def show_main(event=None):
-    document.getElementById("startBtn").style.display = "none"
-    document.querySelector("p").style.display = "none"
-    document.getElementById("mainPage").style.display = "block"
-    load_data()
-    update_list()
+  document.getElementById('subject').value = '';
+  document.getElementById('details').value = '';
+  document.getElementById('dueDate').value = '';
+  updateList();
+}
 
-# ผูกปุ่ม
-document.getElementById("startBtn").addEventListener("click", show_main)
-document.getElementById("addBtn").addEventListener("click", add_homework)
-document.getElementById("deleteBtn").addEventListener("click", delete_homework)
-    </py-script>
+function deleteHomework() {
+  if(selectedIndex === null){
+    alert("กรุณาเลือกการบ้านที่จะลบ");
+    return;
+  }
+  homeworkData.splice(selectedIndex, 1);
+  localStorage.setItem('homeworkData', JSON.stringify(homeworkData));
+  selectedIndex = null;
+  updateList();
+}
+</script>
+
 </body>
 </html>
